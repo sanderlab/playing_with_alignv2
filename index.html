@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AlignmentViewer 2.0 in Action</title>
+<style type="text/css" media="screen">
+    .wrapper {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 100px 100px 40px 30px 700px;
+        grid-gap: 5px;
+        position: relative;
+    }
+    
+    .alignment_box {
+        position:relative;
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 5;
+        grid-row-end: 5;
+    }
+    .ace_content{
+    	cursor: auto;
+    }
+    
+    .position_box {
+        position:relative;
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 4;
+        grid-row-end: 4;
+    }
+    
+    .conservation_box {
+        position:relative;
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 1;
+        grid-row-end: 1;
+        border:solid yellow 1px;
+    }
+    
+    .logo_box {
+        position:relative;
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 2;
+        grid-row-end: 2;
+        border:solid blue 1px;
+    }
+    
+    .queryseq_box {
+        position:relative;
+        grid-column-start: 2;
+        grid-column-end: 4;
+        grid-row-start: 3;
+        grid-row-end: 3;
+    }
+    
+    .datatable_box {
+        position:relative;
+        grid-column-start: 1;
+        grid-column-end: 2;
+        grid-row-start: 5;
+        grid-row-end: 5;
+        border:solid green 1px;
+        overflow: scroll;
+    }
+
+		.alignment_box #ace-editor{
+        position: absolute;
+        top:0px;
+        left:0px;
+        right:0px;
+        bottom:0px;
+        visibility:hidden;
+        border-color:gray; 
+        border-style: solid;
+        border-width: 1px;
+        z-index:10;
+		}
+
+    .queryseq_box #ace-queryseq { 
+        position: absolute;
+        top:0px;
+        left:0px;
+        right:0px;
+        bottom:0px;
+        font-family:Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+				font-size:12px;
+				height:40px;
+				line-height:40px;
+				padding-left:3px;
+				overflow: scroll;
+				overflow-x:hidden;
+    }
+    
+    .position_box #ace-positions { 
+        position: absolute;
+        top:0px;
+        left:0px;
+        right:0px;
+        bottom:0px;
+        font-family:Monaco, Menlo, "Ubuntu Mono", Consolas, source-code-pro, monospace;
+				font-size:12px;
+				height:30px;
+				line-height:30px;
+				padding-left:3px;
+				overflow: scroll;
+				overflow-x:hidden;
+				border-bottom: 1px solid red;
+				border-top: 1px solid red;
+    }
+    
+    #column_mouseover{
+    	position:absolute;
+    	display:none;
+    	pointer-events: none;
+    	height:1000px;
+    	z-index:1000;
+    	border:solid 2px purple;
+    }
+    
+		.ace_Alanine       {color: #33cc00}
+		.ace_Arginine      {color: #cc0000}
+		.ace_Asparagine    {color: #6600cc}
+		.ace_AsparticAcid  {color: #0033ff}
+		.ace_Cysteine      {color: #ffff00}
+		.ace_Glutamine     {color: #6600cc}
+		.ace_GlutamicAcid  {color: #0033ff}
+		.ace_Glycine       {color: #33cc00}
+		.ace_Histidine     {color: #009900}
+		.ace_Isoleucine    {color: #33cc00}
+		.ace_Leucine       {color: #33cc00}
+		.ace_Lysine        {color: #cc0000}
+		.ace_Methionine    {color: #33cc00}
+		.ace_Phenylalanine {color: #009900}
+		.ace_Proline       {color: #33cc00}
+		.ace_Serine        {color: #0099ff}
+		.ace_Threonine     {color: #0099ff}
+		.ace_Tryptophan    {color: #009900}
+		.ace_Tyrosine      {color: #009900}
+		.ace_Valine        {color: #33cc00}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <div id="column_mouseover"></div>
+	<div class="conservation_box">conservation_box - for a conservation plot</div>
+	<div class="logo_box">logo_box - for a sequence logo</div>
+	<div class="queryseq_box">
+	  <div id="ace-queryseq"></div>
+	</div>
+	<div class="position_box">
+    <div id="ace-positions">.....:..10|....:..20|....:..30|....:..40|....:..50|....:..60|....:..70|....:..80|....:..90|....:.100|....:.110|....:.120|....:.130|....:.140|....:.150|....:.160|....:.170|....:.180|....:.190|....:.200|....:.210|....:.220|....:.230|....:.240|....:.250|....:.260|....:.270|....:.280|....:</div>
+	</div>
+	<div class="datatable_box" id="datatable">
+	datatable_box for data about each sequence
+	  <canvas id="myCanvas" style="position:absolute;width:100%;left:0;"></canvas>
+	</div>
+	
+	<div class="alignment_box">
+	  <div id="ace-editor"></div>
+	</div>
+</div>
+
+
+<div id="mylogo"></div>
+
+
+
+<script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="https://bundle.logojs.wenglab.org/bundle.js" type="text/javascript"></script>
+<script src="three.js"></script>
+<script src="pixi.min.js"></script>
+
+
+<script>
+
+		const aaColors = {
+		    '-': '#000000', '.': '#aaaaaa',
+		    'a': '#33cc00', 'A': '#33cc00',
+        'r': '#cc0000', 'R': '#cc0000',
+        'n': '#6600cc', 'N': '#6600cc',
+        'd': '#0033ff', 'D': '#0033ff',
+        'c': '#ffff00', 'C': '#ffff00',
+        'e': '#6600cc', 'E': '#6600cc',
+        'q': '#0033ff', 'Q': '#0033ff',
+        'g': '#33cc00', 'G': '#33cc00',
+        'h': '#009900', 'H': '#009900',
+        'i': '#33cc00', 'I': '#33cc00',
+        'l': '#33cc00', 'L': '#33cc00',
+        'k': '#cc0000', 'K': '#cc0000',
+        'm': '#33cc00', 'M': '#33cc00',
+        'f': '#009900', 'F': '#009900',
+        'p': '#33cc00', 'P': '#33cc00',
+        's': '#0099ff', 'S': '#0099ff',
+        't': '#0099ff', 'T': '#0099ff',
+        'w': '#009900', 'W': '#009900',
+        'y': '#009900', 'Y': '#009900',
+        'v': '#33cc00', 'V': '#33cc00',
+		}
+		
+		const aaColorsHex = {
+		    'a': 0x33cc00, 'A': 0x33cc00,
+        'r': 0xcc0000, 'R': 0xcc0000,
+        'n': 0x6600cc, 'N': 0x6600cc,
+        'd': 0x0033ff, 'D': 0x0033ff,
+        'c': 0xffff00, 'C': 0xffff00,
+        'e': 0x6600cc, 'E': 0x6600cc,
+        'q': 0x0033ff, 'Q': 0x0033ff,
+        'g': 0x33cc00, 'G': 0x33cc00,
+        'h': 0x009900, 'H': 0x009900,
+        'i': 0x33cc00, 'I': 0x33cc00,
+        'l': 0x33cc00, 'L': 0x33cc00,
+        'k': 0xcc0000, 'K': 0xcc0000,
+        'm': 0x33cc00, 'M': 0x33cc00,
+        'f': 0x009900, 'F': 0x009900,
+        'p': 0x33cc00, 'P': 0x33cc00,
+        's': 0x0099ff, 'S': 0x0099ff,
+        't': 0x0099ff, 'T': 0x0099ff,
+        'w': 0x009900, 'W': 0x009900,
+        'y': 0x009900, 'Y': 0x009900,
+        'v': 0x33cc00, 'V': 0x33cc00
+		}
+
+		//
+		//setup ace editors
+		//
+		function prepAceEditor(editor, mode, hideCursor, otherEditors){
+      editor.setShowPrintMargin(false);
+      editor.setReadOnly(true); 
+      editor.setHighlightActiveLine(false);
+      editor.setHighlightGutterLine(false);
+      editor.renderer.setShowGutter(false);
+      editor.setFontSize("10px");
+      editor.session.setMode(mode);
+      editor.renderer.$cursorLayer.element.style.display = "none"
+      
+      editor.on("mousemove", function (e) {
+        var pos = e.getDocumentPosition();
+        var extraPadding = 6;
+        var screenCoordinates = editor.renderer.textToScreenCoordinates(pos.row, pos.column);
+        var characterWidth = editor.renderer.characterWidth;
+        
+        document.getElementById('column_mouseover').style.left=(screenCoordinates.pageX-characterWidth-extraPadding/2-2)+'px';
+        document.getElementById('column_mouseover').style.width=(characterWidth+extraPadding)+'px';
+        document.getElementById('column_mouseover').style.display='block';
+      });
+      
+      editor.session.on("changeScrollLeft", function(e) {
+      	for(i = 0; i < otherEditors.length; i++){
+      		otherEditors[i].session.setScrollLeft(e);
+      	}
+      });
+		}
+    
+    var alignmentEditor = ace.edit('ace-editor');
+    var positionEditor = ace.edit('ace-positions');
+    var queryseqEditor = ace.edit('ace-queryseq');
+    
+    prepAceEditor(alignmentEditor, 'ace/mode/alignment', true, [positionEditor, queryseqEditor]);
+    prepAceEditor(positionEditor, 'ace/mode/alignment', true, [alignmentEditor, queryseqEditor]);
+    prepAceEditor(queryseqEditor, 'ace/mode/alignment', true, [alignmentEditor, positionEditor]);
+    
+    //
+    //load alignment
+    //
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+           if (xmlhttp.status == 200) {
+               const fastaSplitCaret = xmlhttp.responseText.split('>');
+               
+               var targetSequence;
+               var sequences = [];
+               for(i = 0; i < fastaSplitCaret.length; i++){
+               	   const seqname_seq_arr = fastaSplitCaret[i].split(/\r?\n/);
+               	   if (seqname_seq_arr.length > 1){
+               	       var seqObj = {
+               	       		  'seqname': seqname_seq_arr[0],
+               	       		  'seq': seqname_seq_arr.slice(1).join('')
+               	       }
+               	       if (!targetSequence){
+               	       		 targetSequence = seqObj
+               	       }
+               	       else{
+               	           sequences.push(seqObj);
+               	       }
+               	   }
+               }
+               console.log(targetSequence);
+               console.log(sequences);
+               queryseqEditor.insert(targetSequence.seq);
+               alignmentEditor.insert(
+               			sequences.map(x => x.seq).join('\n')
+               );
+               
+               document.getElementById('ace-editor').style.visibility = 'visible';
+               
+               /*
+               //
+               //draw into canvas
+               //
+               var start = new Date().getTime();
+               const canvas = document.getElementById('myCanvas');
+               canvas.width = targetSequence.seq.length;
+               canvas.height = sequences.length;
+							 var ctx = canvas.getContext('2d');
+               for(seqnum = 0; seqnum < sequences.length; seqnum++){
+                   const seq = sequences[seqnum].seq;
+                   for (posnum = 0; posnum < seq.length; posnum++){
+                       ctx.fillStyle = aaColors[seq[posnum]]; //removing saves 50% of time (2.5sec)
+                       ctx.fillRect(posnum, seqnum, 1, 1);
+               		 }
+               }
+               //total time is generally 5sec
+               console.log('Time to draw canvas ('+ (sequences.length*sequences[0].seq.length) +' pixels)='+(new Date().getTime()-start)+'ms');
+           		 */
+           		 
+           		 
+           		 
+               //
+               //draw with threejs
+               //
+               var start = new Date().getTime();
+               
+               var renderer = new THREE.WebGLRenderer();
+           		 renderer.setSize( targetSequence.seq.length, sequences.length );
+           		 document.getElementById('datatable').appendChild( renderer.domElement );
+           		 //var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 500 );
+						   fov = 140
+               near = 1
+               far = 1000
+						   const aspect = targetSequence.seq.length / sequences.length;
+							 let camera = new THREE.PerspectiveCamera(fov, aspect, near, far + 1);
+						   camera.position.set( 0, 0, 100 );
+               camera.lookAt( 0, 1, 0 );
+               
+               
+               var color_geometry = {};
+               
+           		 var scene = new THREE.Scene();
+               //var geometry = new THREE.Geometry();
+               for(seqnum = 0; seqnum < sequences.length; seqnum++){
+                   const seq = sequences[seqnum].seq;
+                   for (posnum = 0; posnum < seq.length; posnum++){
+                   		 const color = aaColors[seq[posnum]]
+                       if (color){
+                           if (!color_geometry[color]){
+                           		 color_geometry[color] = new THREE.Geometry();
+                           		 console.log(color);
+                           }
+                   		     
+                   		     var pt = new THREE.Vector3();
+                           pt.x = THREE.Math.randFloatSpread( posnum );
+                           pt.y = THREE.Math.randFloatSpread( seqnum );
+                           pt.z = THREE.Math.randFloatSpread( 0 );
+                           color_geometry[color].vertices.push( pt );
+                           //geometry.vertices.push( pt );
+                        }
+               		 }
+               }
+               
+               for (const color in color_geometry){
+               		 console.log('color in geometry='+color);
+               		 var material = new THREE.PointsMaterial( { color: new THREE.Color(color) } );
+               		 scene.add( new THREE.Points(color_geometry[color], material) );
+               }
+               
+               //var material = new THREE.PointsMaterial( { color: 0x0000ff } );
+               //scene.add( new THREE.Points(geometry, material) );
+               renderer.render( scene, camera );
+	             console.log('Time to webgl ('+ (seqnum*posnum) +' pixels)='+(new Date().getTime()-start)+'ms');
+           		 
+           	
+           		 //
+           		 //pixijs - SLOW
+           		 //
+           		 /*
+               var start = new Date().getTime();
+               let type = "WebGL"
+               if(!PIXI.utils.isWebGLSupported()){
+                 type = "canvas"
+               }
+               let app = new PIXI.Application({
+                   width: targetSequence.seq.length, 
+                   height: 2000, //sequences.length
+               });
+               document.getElementById('datatable').appendChild( 
+                   app.view
+               );
+               PIXI.loader
+                   .add("square.png")
+                   .load(setup);
+                   
+           		 let sprite = PIXI.Sprite.from('square.png');
+               function setup() {
+               		for(seqnum = 0; seqnum < 2000; seqnum++){ //sequences.length
+                   const seq = sequences[seqnum].seq;
+                   for (posnum = 0; posnum < seq.length; posnum++){
+                     //Create the square sprite
+                     let square = new PIXI.Sprite(PIXI.loader.resources["square.png"].texture);
+                 		 square.x = posnum;
+                     square.y = seqnum;
+                     square.width = 1;
+                     square.height = 1;
+                     square.tint=aaColors[seq[posnum]];
+                     //Add the cat to the stage
+                     app.stage.addChild(square);
+                   }
+               	 }
+	               console.log('Time to pixijs (not render) ('+ (seqnum*posnum) +' pixels)='+(new Date().getTime()-start)+'ms');
+               }
+							 */
+
+							
+           		 //
+           		 //pixijs with primitives - SLOW
+           		 //
+           		 /*
+               var start = new Date().getTime();
+               let type = "WebGL"
+               if(!PIXI.utils.isWebGLSupported()){
+                 type = "canvas"
+               }
+               let app = new PIXI.Application({
+                   width: targetSequence.seq.length, 
+                   height: sequences.length
+               });
+               document.getElementById('datatable').appendChild( 
+                   app.view
+               );
+               
+               let rectangle = new PIXI.Graphics();
+               for(seqnum = 0; seqnum < sequences.length; seqnum++){
+                   const seq = sequences[seqnum].seq;
+                   for (posnum = 0; posnum < seq.length; posnum++){
+                       rectangle.beginFill(aaColors[seq[posnum]]);
+                       rectangle.drawRect(posnum, seqnum, 1, 1);
+                       rectangle.endFill();
+               		 }
+               }
+               app.stage.addChild(rectangle);
+	             console.log('Time to pixijs (not render) ('+ (seqnum*posnum) +' pixels)='+(new Date().getTime()-start)+'ms');
+               */
+           }
+           else if (xmlhttp.status == 400) {
+              alert('There was an error 400');
+           }
+           else {
+               alert('something else other than 200 was returned');
+           }
+        }
+    };
+    xmlhttp.open("GET", "7fa1c5691376beab198788a726917d48_b0.4.a2m", true);
+    xmlhttp.send();
+    
+    
+    
+    //
+    //trick to quickly populate a lot of data
+    //
+	  //for (i = 0; i < 100; i++) {
+	 		//console.log('rows:'+session.getLength());
+    //  alignmentEditor.session.insert({
+    //     row: alignmentEditor.session.getLength(),
+    //     column: 0
+    //  }, startingText)
+	  //}
+	  //document.getElementById('ace-editor').style.visibility = 'visible';
+	  
+</script>
+</body>
+</html>
